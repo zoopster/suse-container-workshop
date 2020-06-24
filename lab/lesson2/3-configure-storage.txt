@@ -1,0 +1,11 @@
+** Create Storage
+
+In a text editor, view the stratos-sc.yaml file.
+This file tells the system to create a storage class.
+
+
+->kubectl create -f ~/install/stratos-sc.yaml
+
+Check that the Storage Class was created
+
+-> kubectl get sc

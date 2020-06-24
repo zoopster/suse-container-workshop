@@ -1,0 +1,35 @@
+** Install and configure Helm
+
+
+Create a Service Account for tiller
+
+-> kubectl create serviceaccount --namespace kube-system tiller
+
+Create a Cluster Binding for tiller
+
+-> kubectl create clusterrolebinding tiller --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+
+Initialize Helm
+
+-> helm init --tiller-image registry.suse.com/caasp/v4/helm-tiller:2.16.1 --service-account tiller
+
+Wait for 30 seconds for things to Load
+
+Look at what Pods are running
+  *note the --all namespaces
+
+-> kubectl get pods --all-namespaces
+
+Check and make sure that all the pods are running.
+If not wait a minite and check running Pods again (command above)
+
+** Add the SUSE charts
+
+This is the most important step.
+This is what gives you access to the SUSE add-ons for Kubernetes
+
+-> helm repo add suse-charts https://kubernetes-charts.suse.com
+
+Look at the Helm Charts that are now available to you
+
+-> helm search suse

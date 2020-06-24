@@ -1,0 +1,64 @@
+** Installing CaaSP on AWS
+
+Here is what is in front of you..
+
+1 Master node
+2 Worker nodes
+
+Start in a Terminal session in Tux’s home
+
+->cd ~
+
+The first thing you need to do is setup SSH.
+
+load ssh key
+
+-> eval $(ssh-agent -s)
+-> ssh-add ~/.ssh/aws.pem
+
+
+The next thing we need to do is initialize the control plane. This creates the config files that will be used by the install
+
+
+-> skuba cluster init --control-plane  yellow-9-elb-933093144.us-east-1.elb.amazonaws.com  --cloud-provider aws my-cluster
+
+-> cd my-cluster
+
+Next we bootstrap cluster by installing the first Master
+
+-> skuba node bootstrap --user ec2-user --sudo --target  ip-10-1-1-11.ec2.internal ip-10-1-1-11.ec2.internal -v5
+ **make sure the cluster Bootstraps correctly...We are currently seeing timeout error on AWS. if you get an error Bootstraping re-run the above command
+
+If you have more Masters you would
+
+“skuba node join – role master  --user tux --sudo --target  aws-internal-FQDN aws-internal-FQDN -v5”
+
+Next we install the Worker Nodes
+
+-> skuba node join --role worker --user ec2-user --sudo --target  ip-10-1-4-67.ec2.internal ip-10-1-4-67.ec2.internal -v5
+
+-> skuba node join --role worker --user ec2-user --sudo --target  ip-10-1-4-6.ec2.internal ip-10-1-4-6.ec2.internal -v5
+
+
+
+** Check the Status of the Cluster
+
+-> skuba cluster status
+
+You should see 1 Master and 2 Worker Nodes
+
+** Setup your workstation…
+
+Copy the Kubernetes  authentication information to ~/.kube so you can use Kubernetes  utilities
+
+-> cp ~/my-cluster/admin.conf ~/.kube/config
+
+Check to make sure kubectl is working and make sure you can see all of the nodes
+
+-> kubectl get nodes -o wide
+
+You can see how to access Kubernetes by entering the following command
+
+->kubectl cluster-info
+	Kubernetes master is running at ... Tells you the URL to the API
+	     **Write down this url. You will need it when we install and setup Stratos

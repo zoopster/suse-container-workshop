@@ -1,0 +1,76 @@
+** Install Stratos
+
+This helm command will install the SUSE Stratos helm chart from the suse-charts repository
+
+->helm install suse-charts/console \
+--name stratos-console \
+--namespace stratos \
+--set console.techPreview=true \
+--set console.localAdminPassword=Sus3c22sp \
+--set kube.storage_class.persistent=gp2scoped \
+--set console.service.type=LoadBalancer
+
+
+ watch for the Stratos pods to finish coming up
+
+-> kubectl get po -n stratos 
+
+
+Find the URL Stratos created using type.LoadBalancer
+
+->kubectl get svc -n stratos
+    write down and copy into the copy/paste buffer the LoadBalancer dns entry (it should end with amazonaws.com)
+
+Open a Webbrowser
+Go to https:// the address from above
+    **note you MUST add https:// to the url or it will not work
+
+Accept the Certificate error by selecting 'Advanced' and the 'Accept Click and Continuee'
+
+Login to Stratos using the default user "admin" and the password entered in the helm install (hint...it's Sus3c22sp)
+
+Add a CaaS Platform endpoint to manage the CaaS Platform cluster
+
+Click the + on the upper Right
+
+Select SUSE CaaS Platform
+	Give it a name
+	Enter the url you wrote down at the end of Lab 
+	     **if you don't have the value you can get it from the command 'kubectl cluster-info'
+	Check the Skip SSL validation for endpoint box
+	Click the Register button
+
+	Click the Connect to (name) now box
+	
+	When it asks to Specify `kubeconfig` file:
+	Browse to ~/my-cluster/admin-conf
+		
+
+Add SUSE Helm charts to Stratus
+    Click on Endpoint
+	Click the + on the upper Right
+	Select Helm Repository
+
+	For the name enter SUSE
+	Enpoint address is https://kubernetes-charts.suse.com
+
+Add Google Helm Charts to Statos
+    Click on Endpoint
+	Click the + on the upper Right
+	Select Helm Repository
+
+	For the name enter Google
+	Enpoint address is https://kubernetes-charts.storage.googleapis.com
+
+
+Add Kubernetes Dashboard
+	  Select Kubernetes  on the Left hand panel
+	  Just above the graphics that show you the Status of the current system you will see a green 'Confiigue' button
+	  Click 'Configure'
+	  Click the Green 'Install Dashboard'
+	  Clink the Green 'Create Service Account' button
+
+Click on the Kubernetes  panel on the left again
+
+
+Click the 'View Dashboard' to view the Kubernetes  Dashboard (its at the top center of the screen)
