@@ -257,15 +257,15 @@ Events:              <none>
 4. Get the user token and user cert values from the secret
 
 ```
-export T1-TOKEN=`kubectl get secret tenant1-user-token-2269d -n tenant1 -o "jsonpath={.data.token}"`
-export T1-CERT=`kubectl get secret tenant1-user-token-2269d -n tenant1 -o "jsonpath={.data['ca\.crt']}"`
+export T1TOKEN=`kubectl get secret tenant1-user-token-2269d -n tenant1 -o "jsonpath={.data.token}"`
+export T1CERT=`kubectl get secret tenant1-user-token-2269d -n tenant1 -o "jsonpath={.data['ca\.crt']}"`
 ```
 
 Verify these values 
 
 ```
-echo $T1-TOKEN
-echo $T1-CERT
+echo $T1TOKEN
+echo $T1CERT
 ```
 
 5. (Your own excercise) Check how to create a kubeconfig file for this new user and pass to the tenant.
@@ -307,6 +307,29 @@ contexts:
 current-context: tenant1
 ```
 
-Then, use this file to connect to CaaSP and see if you can switch to other namespace?
+6. Verify if this tenant1-user can access to the other tenants
+
+NOTE: Since this user account has not been created in LDAP used by CaaSP, we have to impersonate into this user account. 
+
+All pods created under tenant1 should be using this `tenant1-user` account to restrict its access to other tenant.
+
+First, let's setup an alias to impersonate as tenant1-user:
+
+```
+alias kube-user1='kubectl --as=system:serviceaccount:tenant1:tenant1-user'
+```
+
+Then, try listing pods in its own namespace `tenant1` and other namespaces with tenant1-user:
+
+```
+$ kube-user1 get pod -n tenant1-user
+No resources found in tenant1 namespace.
+
+$ kube-user1 get pod -n default
+Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:tenant1:tenant1-user" cannot list resource "pods" in API group "" in the namespace "default"
+
+$ kube-user1 get pod -n kube-system
+Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:tenant1:tenant1-user" cannot list resource "pods" in API group "" in the namespace "kube-system"
+```
 
 
