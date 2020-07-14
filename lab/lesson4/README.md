@@ -84,15 +84,121 @@ kubectl config set-context --current --namespace=hpademo
 git clone https://github.com/dsohk/suse-container-workshop
 cd suse-container-workshop/lab/lesson4
 kubectl apply -f k8s
-kubectl get all -n hpademo
 ```
 
-### Step 4 - 
+Check the resources readiness in hpademo namespace with command `kubectl get all`. The output would be like following:
+
+```
+ec2-user@admin-ws:~/suse-container-workshop/lab/lesson4> kubectl get all
+NAME                              READY   STATUS    RESTARTS   AGE
+pod/hello-suse-74d6fdcdc9-nf7dg   1/1     Running   0          19s
+
+NAME                 TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+service/hello-suse   NodePort   10.96.24.170   <none>        3000:30001/TCP   3m11s
+
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/hello-suse   1/1     1            1           19s
+
+NAME                                    DESIRED   CURRENT   READY   AGE
+replicaset.apps/hello-suse-74d6fdcdc9   1         1         1       19s
+
+NAME                                             REFERENCE               TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/hello-suse   Deployment/hello-suse   <unknown>/1%   1         10        1          3m11s
+```
+
+The `hello-suse` URL will be http://<worker-node-ip>:30001`. Let's check the worker node ip
+
+```
+ec2-user@admin-ws:~/suse-container-workshop/lab/lesson4> kubectl get node -o wide
+NAME                                            STATUS   ROLES    AGE     VERSION   INTERNAL-IP   EXTERNAL-IP    OS-IMAGE                              KERNEL-VERSION           CONTAINER-RUNTIME
+ip-10-1-1-248.ap-southeast-1.compute.internal   Ready    master   5h35m   v1.17.4   10.1.1.248    13.250.25.24   SUSE Linux Enterprise Server 15 SP1   4.12.14-197.45-default   cri-o://1.16.1
+ip-10-1-4-148.ap-southeast-1.compute.internal   Ready    <none>   5h3m    v1.17.4   10.1.4.148    <none>         SUSE Linux Enterprise Server 15 SP1   4.12.14-197.45-default   cri-o://1.16.1
+ip-10-1-4-183.ap-southeast-1.compute.internal   Ready    <none>   5h4m    v1.17.4   10.1.4.183    <none>         SUSE Linux Enterprise Server 15 SP1   4.12.14-197.45-default   cri-o://1.16.1
+```
+
+Just take any worker node IP to access to the hello-suse service. In this case, it would be `http://10.1.4.148:30001`
+
+### Step 4 - Live demo of Horizontal Pod Autoscaling
+
+#### First, install apache benchmark tool for stress test simulation.
 
 ```
 sudo zypper install apache2-utils
 ```
 
+#### Open 3 Terminals and kubernetes dashboard
+
+* Open Stratos with Dashboard installed to view cluster utilization charts.
+* Terminal 1 - Run `watch -n1 -c 'kubectl get pods -n hpademo'`
+* Terminal 2 - Run `watch -n1 -c 'kubectl get hpa -n hpademo'` 
+* Terminal 3 - Load test the web server with command `ab -c 20 -n 10000 -t 100000 http://10.1.4.148:30001/` (Replace the IP with your own worker node IP address AND notice the URL ends with forward slash).
+
+Observations: HPA is in action... scale from 1 pod to 10 pods to serve the traffic loads.
+
+```
+ec2-user@admin-ws:~/suse-container-workshop/lab/lesson4> ab -c 20 -n 10000 -t 1000000 http://10.1.4.148:30001/
+This is ApacheBench, Version 2.3 <$Revision: 1826891 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 10.1.4.148 (be patient)
+Completed 5000 requests
+Completed 10000 requests
+Completed 15000 requests
+Completed 20000 requests
+Completed 25000 requests
+Completed 30000 requests
+Completed 35000 requests
+Completed 40000 requests
+Completed 45000 requests
+Completed 50000 requests
+Finished 50000 requests
+
+
+Server Software:
+Server Hostname:        10.1.4.148
+Server Port:            30001
+
+Document Path:          /
+Document Length:        21 bytes
+
+Concurrency Level:      20
+Time taken for tests:   11.256 seconds
+Complete requests:      50000
+Failed requests:        0
+Total transferred:      6100000 bytes
+HTML transferred:       1050000 bytes
+Requests per second:    4442.16 [#/sec] (mean)
+Time per request:       4.502 [ms] (mean)
+Time per request:       0.225 [ms] (mean, across all concurrent requests)
+Transfer rate:          529.24 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.5      0      20
+Processing:     0    4   5.5      2      87
+Waiting:        0    3   4.4      2      85
+Total:          0    4   5.6      2      87
+```
+
+```
+Every 1.0s: kubectl get hpa                                                                                                                                             admin-ws: Tue Jul 14 20:41:43 2020
+
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+hello-suse   Deployment/hello-suse   0%/1%     1         10        10         25m
+```
+
+```
+Every 1.0s: kubectl get pod -n hpademo                                                                                                                                  admin-ws: Tue Jul 14 20:41:13 2020
+
+NAME                          READY   STATUS    RESTARTS   AGE
+hello-suse-74d6fdcdc9-2fspb   1/1     Running   0          112s
+hello-suse-74d6fdcdc9-7n5k2   1/1     Running   0          97s
+hello-suse-74d6fdcdc9-drfpw   1/1     Running   0          112s
+hello-suse-74d6fdcdc9-f4fcw   1/1     Running   0          2m8s
+hello-suse-74d6fdcdc9-g5mrs   1/1     Running   0          2m8s
+hello-suse-74d6fdcdc9-kh6tp   1/1     Running   0          112s
+```
 
 
 
