@@ -1,0 +1,11 @@
+{
+  "name": "hello-suse",
+  "version": "1.0.0",
+  "description": "Hello World app in node.js",
+  "main": "hello.js",
+  "scripts": {
+    "start" : "node hello.js"
+  },
+  "author": "SUSE Samples",
+  "license": "MIT"
+}

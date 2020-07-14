@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-suse
+  namespace: hpademo
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hello-suse
+    spec:
+      containers:
+      - name: hello-suse
+        image: susesamples/hello-suse:1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        resources:
+            limits:
+              cpu: "0.5"
+            requests:
+              cpu: "0.25"
