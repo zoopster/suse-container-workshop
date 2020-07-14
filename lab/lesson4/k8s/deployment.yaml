@@ -5,6 +5,9 @@ metadata:
   namespace: hpademo
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: hello-suse
   template:
     metadata:
       labels:
