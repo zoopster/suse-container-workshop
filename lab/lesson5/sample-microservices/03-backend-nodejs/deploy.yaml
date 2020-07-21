@@ -22,7 +22,7 @@ spec:
         app: backend-nodejs
     spec:
       containers:
-      - image: susesamples/backend-nodejs:latest
+      - image: susesamples/backend-nodejs:0.9
         imagePullPolicy: Always
         name: backend-nodejs
         ports:

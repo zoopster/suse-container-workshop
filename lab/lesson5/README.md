@@ -131,13 +131,15 @@ kubectl apply -f 03-backend-nodejs/deploy.yaml
 kubectl apply -f 03-backend-nodejs/service.yaml
 ```
 
-After deployed, check the progress with the command below.
+Now check the progress with the command below.
 
 ```
 kubectl get all -n suseapp
 ```
 
-After all pods are running, let's verify if the backend-nodejs RESTful API is in action.
+*CHALLENGE: Do all pods are running properly? If not, how can you troubleshoot and fix the issue?*
+
+After all pods are running, let's verify if the backend-nodejs RESTful API is in action with the command below.
 
 ```
 kubectl run -n suseapp -it --rm --image=alpine --restart=Never test-$RANDOM
