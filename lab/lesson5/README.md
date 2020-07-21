@@ -177,7 +177,9 @@ The PodIPaddress is: 10.107.65.54
 Node.js backend app listening on port 3000!
 ```
 
-## Lab 3 - scale backend-nodejs 
+## Lab 3 - Scale out and Rolling Update an App
+
+Let's scale out the app to 10 replicas
 
 ```
 kubectl scale --replicas=10 deploy/backend-nodejs -n suseapp
@@ -205,16 +207,16 @@ mysql-647c46478f-p7t8h            1/1     Running   0          11h
 Let's update from version 1.0 to version 2.0
 
 ```
-kubectl set image deploy/backend-nodejs backend-nodejs=susesamples/backend-nodejs:2.0 -n suseapp --record
+kubectl set image deploy/backend-nodejs backend-nodejs=susesamples/backend-nodejs:2.0 -n suseapp --record=true
 ```
 
-check rollout status
+Now, let's check rollout status
 
 ```
 kubectl rollout status deploy backend-nodejs -n suseapp
 ```
 
-Review deployment history
+Review deployment history... all pods are updated to 2.0
 
 ```
 # kubectl rollout history deployment backend-nodejs -n suseapp
@@ -229,6 +231,174 @@ Scale back
 
 ```
 kubectl scale --replicas=1 deploy/backend-nodejs -n suseapp
+```
+
+## Lab 4 - Examine Cilium in CaaSP
+
+### Step 1 - List all cilium agents
+
+```
+kubectl get pod -n kube-system -o wide | grep cilium
+```
+
+Output is like below. Any pod name with cilium- prefix are cilium agents.
+
+```
+# kubectl get pod -n kube-system -o wide | grep cilium
+cilium-2gntp                                                            1/1     Running   1          24h   10.1.4.204       ip-10-1-4-204.ap-southeast-1.compute.internal   <none>           <none>
+cilium-4d7p7                                                            1/1     Running   1          24h   10.1.4.107       ip-10-1-4-107.ap-southeast-1.compute.internal   <none>           <none>
+cilium-operator-5dc8bf8b57-tsfbl                                        1/1     Running   0          23h   10.1.4.204       ip-10-1-4-204.ap-southeast-1.compute.internal   <none>           <none>
+cilium-xwskh                                                            1/1     Running   1          24h   10.1.1.253       ip-10-1-1-253.ap-southeast-1.compute.internal   <none>           <none>
+```
+
+### Step 2 - Connect to one of the cilium agents in worker node 
+
+```
+kubectl exec -it cilium-4d7p7 -n kube-system -- cilium status --all-controllers --all-health --all-redirects
+```
+
+You should see the following outputs
+
+```
+# kubectl exec -it cilium-4d7p7 -n kube-system -- cilium status  --all-controllers --all-health --all-redirects
+KVStore:                Ok   Disabled
+ContainerRuntime:       Ok   cri-o client: Ok - cri daemon: Ok
+Kubernetes:             Ok   1.17 (v1.17.4) [linux/amd64]
+Kubernetes APIs:        ["CustomResourceDefinition", "cilium/v2::CiliumEndpoint", "cilium/v2::CiliumNetworkPolicy", "cilium/v2::CiliumNode", "core/v1::Endpoint", "core/v1::Namespace", "core/v1::Pods", "core/v1::Service", "networking.k8s.io/v1::NetworkPolicy"]
+Cilium:                 Ok   OK
+NodeMonitor:            Disabled
+Cilium health daemon:   Ok
+IPAM:                   IPv4: 7/65535 allocated from 10.107.0.0/16,
+Controller Status:      31/31 healthy
+  Name                                  Last success    Last error   Count   Message
+  cilium-health-ep                      43s ago         never        0       no error
+  dns-garbage-collector-job             45s ago         never        0       no error
+  endpoint-128-regeneration-recovery    never           never        0       no error
+  endpoint-1796-regeneration-recovery   never           never        0       no error
+  endpoint-3122-regeneration-recovery   never           never        0       no error
+  endpoint-3559-regeneration-recovery   never           never        0       no error
+  endpoint-522-regeneration-recovery    never           never        0       no error
+  endpoint-995-regeneration-recovery    never           never        0       no error
+  metricsmap-bpf-prom-sync              5s ago          never        0       no error
+  resolve-identity-128                  1m42s ago       never        0       no error
+  resolve-identity-1796                 1m44s ago       never        0       no error
+  resolve-identity-3122                 1m45s ago       never        0       no error
+  resolve-identity-3559                 2m42s ago       never        0       no error
+  resolve-identity-522                  1m42s ago       never        0       no error
+  resolve-identity-995                  1m55s ago       never        0       no error
+  sync-endpoints-and-host-ips           45s ago         never        0       no error
+  sync-lb-maps-with-k8s-services        23h26m45s ago   never        0       no error
+  sync-policymap-128                    30s ago         never        0       no error
+  sync-policymap-1796                   30s ago         never        0       no error
+  sync-policymap-3122                   30s ago         never        0       no error
+  sync-policymap-3559                   30s ago         never        0       no error
+  sync-policymap-522                    30s ago         never        0       no error
+  sync-policymap-995                    30s ago         never        0       no error
+  sync-to-k8s-ciliumendpoint (128)      8s ago          never        0       no error
+  sync-to-k8s-ciliumendpoint (1796)     3s ago          never        0       no error
+  sync-to-k8s-ciliumendpoint (3122)     1s ago          never        0       no error
+  sync-to-k8s-ciliumendpoint (3559)     9s ago          never        0       no error
+  sync-to-k8s-ciliumendpoint (522)      8s ago          never        0       no error
+  sync-to-k8s-ciliumendpoint (995)      2s ago          never        0       no error
+  template-dir-watcher                  never           never        0       no error
+  update-k8s-node-annotations           23h26m48s ago   never        0       no error
+Proxy Status:   OK, ip 10.107.4.174, port-range 10000-20000
+Cluster health:                                               3/3 reachable   (2020-07-21T23:47:08Z)
+  Name                                                        IP              Reachable   Endpoints reachable
+  ip-10-1-4-107.ap-southeast-1.compute.internal (localhost)   10.1.4.107      true        true
+  ip-10-1-1-253.ap-southeast-1.compute.internal               10.1.1.253      true        true
+  ip-10-1-4-204.ap-southeast-1.compute.internal               10.1.4.204      true        true
+```
+
+### Step 3 - Review cilium configuration for a worker node
+
+```
+kubectl exec -it cilium-4d7p7 -n kube-system -- cilium config
+```
+
+The output is like below.
+
+```
+Conntrack                Enabled
+ConntrackAccounting      Enabled
+ConntrackLocal           Disabled
+Debug                    Disabled
+DebugLB                  Disabled
+DropNotification         Enabled
+MonitorAggregationLevel  None
+PolicyTracing            Disabled
+TraceNotification        Enabled
+k8s-configuration
+k8s-endpoint
+PolicyEnforcement        default
+```
+
+### Step 4 - Check for drop packets
+
+Run this command to check if there's any packdrop to the agent running on a specific node.
+
+```
+kubectl exec -it cilium-4d7p7 -n kube-system -- cilium monitor --type drop
+```
+
+### Step 5 - Check network healthiness with cilium
+
+To review the detailed status status of Cilium in your cluster
+
+```
+kubectl exec -it cilium-4d7p7 -n kube-system -- cilium status
+```
+
+You will see the following output indicating the networking of the cluster is healthy.
+
+```
+KVStore:                Ok   Disabled
+ContainerRuntime:       Ok   cri-o client: Ok - cri daemon: Ok
+Kubernetes:             Ok   1.17 (v1.17.4) [linux/amd64]
+Kubernetes APIs:        ["CustomResourceDefinition", "cilium/v2::CiliumEndpoint", "cilium/v2::CiliumNetworkPolicy", "cilium/v2::CiliumNode", "core/v1::Endpoint", "core/v1::Namespace", "core/v1::Pods", "core/v1::Service", "networking.k8s.io/v1::NetworkPolicy"]
+Cilium:                 Ok   OK
+NodeMonitor:            Listening for events on 2 CPUs with 64x4096 of shared memory
+Cilium health daemon:   Ok
+IPAM:                   IPv4: 7/65535 allocated from 10.107.0.0/16,
+Controller Status:      31/31 healthy
+Proxy Status:           OK, ip 10.107.4.174, port-range 10000-20000
+Cluster health:   3/3 reachable   (2020-07-21T23:56:08Z)
+```
+
+
+To describe the connectivity from each node to every other nodes in the cluster, and to a simulated endpoint on each other node.
+
+```
+cilium-health status
+```
+
+You will see all the end-point connectivity status which is in good shape as well :-)
+
+```
+kubectl exec -it cilium-4d7p7 -n kube-system -- cilium-health status
+Probe time:   2020-07-21T23:57:08Z
+Nodes:
+  ip-10-1-4-107.ap-southeast-1.compute.internal (localhost):
+    Host connectivity to 10.1.4.107:
+      ICMP to stack:   OK, RTT=281.372µs
+      HTTP to agent:   OK, RTT=106.127µs
+    Endpoint connectivity to 10.107.92.235:
+      ICMP to stack:   OK, RTT=300.123µs
+      HTTP to agent:   OK, RTT=226.034µs
+  ip-10-1-1-253.ap-southeast-1.compute.internal:
+    Host connectivity to 10.1.1.253:
+      ICMP to stack:   OK, RTT=319.499µs
+      HTTP to agent:   OK, RTT=410.179µs
+    Endpoint connectivity to 10.253.19.209:
+      ICMP to stack:   OK, RTT=396.035µs
+      HTTP to agent:   OK, RTT=381.263µs
+  ip-10-1-4-204.ap-southeast-1.compute.internal:
+    Host connectivity to 10.1.4.204:
+      ICMP to stack:   OK, RTT=308.478µs
+      HTTP to agent:   OK, RTT=226.072µs
+    Endpoint connectivity to 10.204.164.111:
+      ICMP to stack:   OK, RTT=435.241µs
+      HTTP to agent:   OK, RTT=327.414µs
 ```
 
 
