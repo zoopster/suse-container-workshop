@@ -250,8 +250,13 @@ Please make sure the same output is seen for tenant2 as well.
 
 ```
 kubectl run --generator=run-pod/v1 test-$RANDOM -n tenant1 --rm -it --image=alpine -- sh
-/ # wget -qO- --timeout=2 http://web.tenant1
-/ # exit
+```
+
+Then, you will be shown a command prompt (line started with `\ #`) from the alpine container. Enter the following command and then exit.
+
+```
+wget -qO- --timeout=2 http://web.tenant1
+exit
 ```
 
 Output would be as follows :-
@@ -291,8 +296,13 @@ Create a client in `tenant1` and then try to use `wget` utility to access to `we
 
 ```
 kubectl run --generator=run-pod/v1 test-$RANDOM -n tenant1 --rm -it --image=alpine -- sh
-/ # wget -qO- --timeout=2 http://web.tenant2
-/ # exit
+```
+
+In the alpine container command prompt (line starts with `\ #`), enter the following:
+
+```
+wget -qO- --timeout=2 http://web.tenant2
+exit
 ```
 
 Did you see the same HTML markup code output? This is not good for tenant isolation. Let's apply network policy to prevent this.
@@ -357,8 +367,12 @@ kubectl get netpol -n tenant2
 
 ```
 kubectl run --generator=run-pod/v1 test-$RANDOM -n tenant1 --rm -it --image=alpine -- sh
-/ # wget -qO- --timeout=2 http://web.tenant1
-/ # exit
+```
+
+Enter the following command in alpine container command prompt (lines start with `\ #`):
+```
+wget -qO- --timeout=2 http://web.tenant1
+exit
 ```
 
 Expected Output: HTML markup from NGINX
@@ -368,8 +382,13 @@ Expected Output: HTML markup from NGINX
 
 ```
 kubectl run --generator=run-pod/v1 test-$RANDOM -n tenant2 --rm -it --image=alpine -- sh
-/ # wget -qO- --timeout=2 http://web.tenant1
-/ # exit
+```
+
+Enter the following command in alpine container command prompt (lines start with `\ #`):
+
+```
+wget -qO- --timeout=2 http://web.tenant1
+exit
 ```
 
 Expected Output:
@@ -381,9 +400,15 @@ wget: download timed out
 
 ```
 kubectl run --generator=run-pod/v1 test-$RANDOM -n tenant2 --rm -it --image=alpine -- sh
-/ # wget -qO- --timeout=2 http://web.tenant2
-/ # exit
 ```
+
+Enter the following command in alpine container command prompt (lines start with `\ #`):
+
+```
+wget -qO- --timeout=2 http://web.tenant2
+exit
+```
+
 
 Expected Output: HTML markup from NGINX
 
@@ -392,9 +417,15 @@ Expected Output: HTML markup from NGINX
 
 ```
 kubectl run --generator=run-pod/v1 test-$RANDOM -n tenant1 --rm -it --image=alpine -- sh
-/ # wget -qO- --timeout=2 http://web.tenant2
-/ # exit
 ```
+
+Enter the following command in alpine container command prompt (lines start with `\ #`):
+
+```
+wget -qO- --timeout=2 http://web.tenant2
+exit
+```
+
 
 Expected Output:
 ```
