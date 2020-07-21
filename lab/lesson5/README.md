@@ -177,4 +177,58 @@ The PodIPaddress is: 10.107.65.54
 Node.js backend app listening on port 3000!
 ```
 
+## Lab 3 - scale backend-nodejs 
+
+```
+kubectl scale --replicas=10 deploy/backend-nodejs -n suseapp
+```
+
+The output would be similar to the one below - having 10 replicas of backend-nodejs instances running.
+
+```
+# kubectl get pod -n suseapp
+NAME                              READY   STATUS    RESTARTS   AGE
+adminer-84f6bfd7c8-kjzxl          1/1     Running   0          11h
+backend-nodejs-7b6f5cc67f-28fpf   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-2w6pp   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-48982   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-956h6   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-bjh4z   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-f4b4s   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-nsfgg   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-v5h62   1/1     Running   0          21s
+backend-nodejs-7b6f5cc67f-xsbms   1/1     Running   0          8h
+backend-nodejs-7b6f5cc67f-ztcrt   1/1     Running   0          21s
+mysql-647c46478f-p7t8h            1/1     Running   0          11h
+```
+
+Let's update from version 1.0 to version 2.0
+
+```
+kubectl set image deploy/backend-nodejs backend-nodejs=susesamples/backend-nodejs:2.0 -n suseapp --record
+```
+
+check rollout status
+
+```
+kubectl rollout status deploy backend-nodejs -n suseapp
+```
+
+Review deployment history
+
+```
+# kubectl rollout history deployment backend-nodejs -n suseapp
+deployment.apps/backend-nodejs
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+3         kubectl set image deploy/backend-nodejs backend-nodejs=susesamples/backend-nodejs:2.0 --namespace=suseapp --record=true
+```
+
+Scale back
+
+```
+kubectl scale --replicas=1 deploy/backend-nodejs -n suseapp
+```
+
 
