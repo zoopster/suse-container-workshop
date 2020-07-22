@@ -1,0 +1,22 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+description: "Allow HTTP GET / from tier=backend to app=backend-nodejs"
+metadata:
+  name: "backend-nodejs-http-get-only"
+  namespace: suseapp
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend-nodejs
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        tier: backend
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+      rules:
+        http:
+        - method: "GET"
+          path: "/"

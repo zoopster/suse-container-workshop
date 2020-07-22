@@ -401,4 +401,40 @@ Nodes:
       HTTP to agent:   OK, RTT=327.414µs
 ```
 
+## Lab 5 - Secure backend-nodejs API service with cilium L7 Network Policy
+
+### Step 1 - change to the cilium network policy manifest folder
+
+```
+cd ~/suse-container-workshop/lab/lesson5/sample-microservices/cilium
+```
+
+### Step 2 - Apply the L7 network policy for backend-nodejs
+
+```
+kubectl apply -f backend-nodejs-http-get-only.yaml
+```
+
+Output should be like below.
+
+```
+ciliumnetworkpolicy.cilium.io/backend-nodejs-http-get-only created
+```
+
+### Step 3 - Check if the policy is created.
+
+```
+kubectl get cnp -n suseapp
+```
+
+Output will be like the following.
+
+```
+# kubectl get cnp -n suseapp
+NAME                           AGE
+backend-nodejs-http-get-only   12s
+```
+
+### Step 4 - verification
+
 
