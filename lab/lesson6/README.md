@@ -40,13 +40,14 @@ NAME                  PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE 
 gp2scoped (default)   kubernetes.io/aws-ebs   Retain          Immediate           false                  3d18h
 ```
 
-### 2. Initialize helm client and add harbor helm repository
+### 2. Initialize helm client and add suse and  harbor helm repository
 
 To make it easy, we are going to use the helm chart created by bitnami. For detailed setup, please visit https://hub.helm.sh/charts/bitnami/harbor
 
 ```
 helm init --client-only
 helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add suse https://kubernetes-charts.suse.com
 ```
 
 Verify if you can run helm with `tux` linux user account like below.
@@ -65,15 +66,77 @@ NAME   	URL
 stable 	https://kubernetes-charts.storage.googleapis.com
 local  	http://127.0.0.1:8879/charts
 bitnami	https://charts.bitnami.com/bitnami
+suse   	https://kubernetes-charts.suse.com
 ```
 
-### 3. Create harbor-system namespace
+### 3. Deploy nginx ingress controller
+
+Use helm chart to deploy the nginx ingress controller
+
+```
+helm install --name nginx-ingress suse/nginx-ingress \
+  --namespace nginx-ingress \
+  --values ~/suse-container-workshop/lab/lesson6/nginx-ingress-config-values.yaml
+```
+
+Verify if nginx-ingress is ready
+
+```
+# kubectl get all -n nginx-ingress
+NAME                                                 READY   STATUS    RESTARTS   AGE
+pod/nginx-ingress-controller-6b46bb7f6f-bkfdv        1/1     Running   0          67s
+pod/nginx-ingress-default-backend-84f74bdfb6-vslm2   1/1     Running   0          67s
+
+NAME                                    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)         AGE
+service/nginx-ingress-controller        NodePort    10.109.239.169   <none>        443:32443/TCP   67s
+service/nginx-ingress-default-backend   ClusterIP   10.96.118.246    <none>        80/TCP          67s
+
+NAME                                            READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx-ingress-controller        1/1     1            1           67s
+deployment.apps/nginx-ingress-default-backend   1/1     1            1           67s
+
+NAME                                                       DESIRED   CURRENT   READY   AGE
+replicaset.apps/nginx-ingress-controller-6b46bb7f6f        1         1         1       67s
+replicaset.apps/nginx-ingress-default-backend-84f74bdfb6   1         1         1       67s
+```
+
+### 4. Add /etc/hosts entry
+
+Find the external IP of the SUSE CaaSP cluster
+
+```
+export NODE_IP=$(kubectl --namespace nginx-ingress get nodes -o jsonpath="{.items[0].status.addresses[1].address}")
+echo $NODE_IP
+```
+
+For example, your IP is `46.137.224.24`, add the following entries in `/etc/hosts` file (with `sudo` privilege)
+
+```
+sudo vi /etc/hosts
+```
+
+Entry:
+
+```
+46.137.224.24	registry.suse.workshop core.suse.workshop notary.suse.workshop
+```
+
+Verify if nginx-ingress is working:
+
+```
+curl -k https://registry.suse.workshop:32443
+```
+
+This should output `default backend - 404` as a result of the curl command.
+
+
+### 5. Create harbor-system namespace
 
 ```
 kubectl create ns harbor-system
 ```
 
-### 4. Deploy harbor with helm chart
+### 6. Deploy harbor with helm chart
 
 ```
 helm install bitnami/harbor \
@@ -81,16 +144,22 @@ helm install bitnami/harbor \
   --namespace harbor-system \
   --set harborAdminPassword=password \
   --set global.storageClass=gp2scoped \
-  --set service.type=NodePort \
-  --set service.tls.commonName=harbor.domain
+  --set service.type=Ingress \
+  --set service.tls.commonName=registry.suse.workshop \
+  --set externalURL=https://registry.suse.workshop:32443 \
+  --set ingress.enabled=true \
+  --set ingress.hosts.core=core.suse.workshop \
+  --set ingress.hosts.notary=notary.suse.workshop \
+  --set persistence.resourcePolicy= \
+  --set registry.credentials.username=admin \
+  --set registry.credentials.password=password 
 ```
 
 The output would be like below.
 
 ```
 NAME:   harbor
-E0804 16:46:15.576766   21566 portforward.go:372] error copying from remote stream to local connection: readfrom tcp4 127.0.0.1:38167->127.0.0.1:34370: write tcp4 127.0.0.1:38167->127.0.0.1:34370: write: broken pipe
-LAST DEPLOYED: Tue Aug  4 16:46:10 2020
+LAST DEPLOYED: Tue Aug  4 20:03:54 2020
 NAMESPACE: harbor-system
 STATUS: DEPLOYED
 
@@ -102,7 +171,6 @@ harbor-core                     1s
 harbor-core-envvars             1s
 harbor-jobservice               1s
 harbor-jobservice-envvars       1s
-harbor-nginx                    1s
 harbor-portal                   1s
 harbor-postgresql-init-scripts  1s
 harbor-redis                    1s
@@ -112,15 +180,14 @@ harbor-trivy-envvars            1s
 
 ==> v1/Deployment
 NAME                  AGE
-harbor-chartmuseum    0s
-harbor-clair          0s
-harbor-core           0s
-harbor-jobservice     0s
-harbor-nginx          0s
-harbor-notary-server  0s
-harbor-notary-signer  0s
-harbor-portal         0s
-harbor-registry       0s
+harbor-chartmuseum    1s
+harbor-clair          1s
+harbor-core           1s
+harbor-jobservice     1s
+harbor-notary-server  1s
+harbor-notary-signer  1s
+harbor-portal         1s
+harbor-registry       1s
 
 ==> v1/PersistentVolumeClaim
 NAME                AGE
@@ -130,17 +197,16 @@ harbor-registry     1s
 
 ==> v1/Pod(related)
 NAME                                   AGE
-harbor-chartmuseum-69c8dbd7b7-bm8r4    0s
-harbor-clair-664f5d6896-rklzk          0s
-harbor-core-647985dd79-zdltf           0s
-harbor-jobservice-558b7764f6-pwvcb     0s
-harbor-nginx-99658f667-8tkp6           0s
-harbor-notary-server-6bc5c887d-zh62f   0s
-harbor-notary-signer-5cc4b496c5-dnghb  0s
-harbor-portal-7bf8f5848b-j8568         0s
+harbor-chartmuseum-5cd5c9ff7f-lvmgf    1s
+harbor-clair-664f5d6896-c8548          1s
+harbor-core-69c77c6cfb-g8qkt           1s
+harbor-jobservice-6c6cf8746f-nqkrb     1s
+harbor-notary-server-7f8c6b446b-npfgj  0s
+harbor-notary-signer-658fc6b5f9-dkmb4  0s
+harbor-portal-7bf8f5848b-hl274         0s
 harbor-postgresql-0                    0s
 harbor-redis-master-0                  0s
-harbor-registry-bf8676b76-bvtkl        0s
+harbor-registry-56cfd75df5-rwdbq       1s
 harbor-trivy-0                         0s
 
 ==> v1/Secret
@@ -149,9 +215,9 @@ harbor-chartmuseum-secret  1s
 harbor-clair               1s
 harbor-core                1s
 harbor-core-envvars        1s
+harbor-ingress             1s
 harbor-jobservice          1s
 harbor-jobservice-envvars  1s
-harbor-nginx               1s
 harbor-notary-server       1s
 harbor-postgresql          1s
 harbor-registry            1s
@@ -159,12 +225,11 @@ harbor-trivy-envvars       1s
 
 ==> v1/Service
 NAME                        AGE
-harbor                      1s
 harbor-chartmuseum          1s
 harbor-clair                1s
 harbor-core                 1s
 harbor-jobservice           1s
-harbor-notary-server        0s
+harbor-notary-server        1s
 harbor-notary-signer        1s
 harbor-portal               1s
 harbor-postgresql           1s
@@ -176,9 +241,14 @@ harbor-trivy                1s
 
 ==> v1/StatefulSet
 NAME                 AGE
-harbor-postgresql    0s
-harbor-redis-master  0s
-harbor-trivy         0s
+harbor-postgresql    1s
+harbor-redis-master  1s
+harbor-trivy         1s
+
+==> v1beta1/Ingress
+NAME                   AGE
+harbor-ingress         0s
+harbor-ingress-notary  0s
 
 
 NOTES:
@@ -186,9 +256,7 @@ NOTES:
 
 1. Get the Harbor URL:
 
-  export NODE_PORT=$(kubectl get --namespace harbor-system -o jsonpath="{.spec.ports[0].nodePort}" services harbor)
-  export NODE_IP=$(kubectl get nodes --namespace harbor-system -o jsonpath="{.items[0].status.addresses[0].address}")
-  echo "Harbor URL: http://$NODE_IP:$NODE_PORT/"
+  You should be able to access your new Harbor installation through https://registry.suse.workshop:32443
 
 2. Login with the following credentials to see your Harbor application
 
@@ -223,19 +291,9 @@ harbor-registry-bf8676b76-bvtkl         2/2     Running   0          4m3s
 harbor-trivy-0                          1/1     Running   0          4m3s
 ```
 
-### 5. Get the harbor URL:
+### 6. Visit Habor UI
 
-```
-export NODE_PORT=$(kubectl get --namespace harbor-system -o jsonpath="{.spec.ports[1].nodePort}" services harbor)
-export NODE_IP=$(kubectl get nodes --namespace harbor-system -o jsonpath="{.items[0].status.addresses[1].address}")
-echo "Harbor URL: https://$NODE_IP:$NODE_PORT/"
-```
-
-The output would be like this:
-
-```
-Harbor URL: https://46.137.224.24:31569/
-```
+The harbor link should be `https://core.suse.workshop:32443`
 
 Visit the link above with your browser and you should see a login page after accepting invalid SSL certification warning.
 
@@ -251,5 +309,107 @@ pass: password
 You should then be able to navigate into the home page like below.
 
 ![Harbor Dashboard](/lab/lesson6/images/harbor-dashboard.png)
+
+
+### 7. Setup docker client to authenticate against Harbor
+
+NOTE: Not working yet 
+
+First, we need to add harbor.domain
+
+Using sudo privilege, edit `/etc/docker/daemon.json` file and add the `insecure registries` in the json file.
+
+```
+sudo vi /etc/docker/daemon.json
+```
+
+Enter content like below. (Port number must be matching with `$NODE_PORT` found in Step 6.
+
+```
+{
+  "log-level": "warn",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "5"
+  },
+  "insecure-registries" : ["core.suse.workshop:32443"]
+}
+```
+
+Restart docker service to pick up the configuration change.
+
+```
+sudo systemctl restart docker
+```
+
+Verify if the entry is added.
+
+```
+docker info
+```
+
+You should see the following output extracted.
+
+```
+ Insecure Registries:
+  core.suse.workshop:32443
+  127.0.0.0/8
+```
+
+
+## Lab 2 - install jenkins
+
+### 1. Deploy jenkins onto SUSE CaaSP with helm
+
+```
+helm install stable/jenkins --name jenkins \
+  --namespace jenkins-system \
+  --values ~/suse-container-workshop/lab/lesson6/jenkins-config-values.yaml
+```
+
+### 2. Verify if jenkins is ready
+
+```
+kubectl get all -n jenkins-system
+```
+
+Output would be like below.
+
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/jenkins-8684788b9-fxrpq   2/2     Running   0          2m36s
+
+NAME                    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+service/jenkins         NodePort    10.106.216.247   <none>        8080:32450/TCP   2m36s
+service/jenkins-agent   ClusterIP   10.101.139.195   <none>        50000/TCP        2m36s
+
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/jenkins   1/1     1            1           2m36s
+
+NAME                                DESIRED   CURRENT   READY   AGE
+replicaset.apps/jenkins-8684788b9   1         1         1       2m36s
+```
+
+### 3. Visit the jenkins URL
+
+Find the jenkins URL
+
+```
+export NODE_IP=$(kubectl --namespace nginx-ingress get nodes -o jsonpath="{.items[0].status.addresses[1].address}")
+export NODE_PORT=$(kubectl get svc jenkins -n jenkins-system -o jsonpath="{.spec.ports[0]['nodePort']}")
+echo "http://$NODE_IP:$NODE_PORT"
+```
+
+The output should be the URL of jenkins:
+
+```
+http://46.137.224.24:32450
+```
+
+You should see the following screen with a browser.
+
+![Jenkins](/lab/lesson6/images/jenkins.png)
+
 
 
