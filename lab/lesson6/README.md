@@ -1,4 +1,4 @@
-# Lesson 5 - Continuous Integration / Continuous Delivery
+# Lesson 6 - Continuous Integration / Continuous Delivery
 
 In this lab, we are going to explore continuous integration and continuous delivery with SUSE CaaSP
 
@@ -26,7 +26,7 @@ git pull
 
 In this exercise, we are going to install Harbor Registry onto SUSE CaaSP cluster within `harbor-system` namespace using `helm` chart.
 
-1. Make the current storage class as default
+### 1. Make the current storage class as default
 
 ```
 kubectl patch storageclass gp2scoped -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
@@ -40,7 +40,7 @@ NAME                  PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE 
 gp2scoped (default)   kubernetes.io/aws-ebs   Retain          Immediate           false                  3d18h
 ```
 
-2. Initialize helm client and add harbor helm repository
+### 2. Initialize helm client and add harbor helm repository
 
 To make it easy, we are going to use the helm chart created by bitnami. For detailed setup, please visit https://hub.helm.sh/charts/bitnami/harbor
 
@@ -67,13 +67,13 @@ local  	http://127.0.0.1:8879/charts
 bitnami	https://charts.bitnami.com/bitnami
 ```
 
-3. Create harbor-system namespace
+### 3. Create harbor-system namespace
 
 ```
 kubectl create ns harbor-system
 ```
 
-4. Deploy harbor with helm chart
+### 4. Deploy harbor with helm chart
 
 ```
 helm install bitnami/harbor \
@@ -223,7 +223,7 @@ harbor-registry-bf8676b76-bvtkl         2/2     Running   0          4m3s
 harbor-trivy-0                          1/1     Running   0          4m3s
 ```
 
-Get the harbor URL:
+### 5. Get the harbor URL:
 
 ```
 export NODE_PORT=$(kubectl get --namespace harbor-system -o jsonpath="{.spec.ports[1].nodePort}" services harbor)
@@ -241,7 +241,7 @@ Visit the link above with your browser and you should see a login page after acc
 
 ![Harbor Login](/lab/lesson6/images/harbor-login.png)
 
-Then, login as administrator with the following credentials:
+### 6. Login as administrator with the following credentials:
 
 ```
 user: admin
