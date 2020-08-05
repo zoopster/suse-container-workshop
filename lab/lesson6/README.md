@@ -413,3 +413,16 @@ You should see the following screen with a browser.
 
 
 
+## Lab 3 - Build App Delivery Pipeline on Jenkins
+
+### Make sure you have login credential for dockerhub and github
+
+We will use Github and Dockerhub in this lab exercise.
+
+
+1. Fork from https://github.com/dsohk/spring-petclinic.git
+
+2. Login to Jenkins
+
+3. Follow me on the instruction...
+

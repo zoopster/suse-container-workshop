@@ -12,6 +12,7 @@ master:
     - command-launcher:1.4
     - github-branch-source:2.8.3
     - docker-workflow:1.23
+    - docker-build-step:2.4
     - pipeline-utility-steps:2.6.1
   overwritePlugins: true
   serviceType: NodePort
